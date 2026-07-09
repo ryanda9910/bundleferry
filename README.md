@@ -110,11 +110,71 @@ Installs the skill into every coding agent it finds. `--project` also installs i
 current repo's `.claude/`. Manual: copy [`skill/SKILL.md`](skill/SKILL.md) into your
 agent's skills/rules dir (`~/.claude/skills/bundleferry/SKILL.md`).
 
+## Support matrix
+
+Every cell is real — `plan` = a tiered migration plan, `route` = stopped at the
+rendering/platform gate (architectural, not a bundler swap), `—` = same source and
+target (nothing to do). No dead cells.
+
+| source \ target | Vite | Rspack | esbuild | tsup | Rolldown | Parcel | Bun |
+|---|---|---|---|---|---|---|---|
+| **webpack** | plan | plan | plan | plan | plan | plan | plan |
+| **CRA** | plan | plan | plan | plan | plan | plan | plan |
+| **CRACO** | plan | plan | plan | plan | plan | plan | plan |
+| **Rollup** | plan | plan | plan | plan | plan | plan | plan |
+| **Parcel** | plan | plan | plan | plan | plan | — | plan |
+| **esbuild** | plan | plan | — | plan | plan | plan | plan |
+| **Snowpack** | plan | plan | plan | plan | plan | plan | plan |
+| **Gulp** | plan | plan | plan | plan | plan | plan | plan |
+| **Browserify** | plan | plan | plan | plan | plan | plan | plan |
+| **Rspack** | plan | — | plan | plan | plan | plan | plan |
+| **Vite** | — | plan | plan | plan | plan | plan | plan |
+| **Bun** | plan | plan | plan | plan | plan | plan | — |
+| **Metro / RN** | route | route | route | route | route | route | route |
+| **Next / Turbopack** | route | route | route | route | route | route | route |
+
+`bundleferry <dir> --target <name>` · `--list-targets` · `--detect <dir>` · `--size <old> <new>`
+
 ## Documentation
 
 Full docs in **[docs/](docs/)** — [usage](docs/usage.md) · [reference](docs/checklist.md) ·
 [install](docs/install.md) · [customizing](docs/customizing.md) · [FAQ](docs/faq.md) ·
 [real runs](CASES.md) · [contributing](CONTRIBUTING.md).
+
+## About
+
+**Why this exists.** "Just switch the bundler" is one of the most under-estimated tasks in
+frontend work. The config translates about 80% of the way, and the remaining 20% —
+`process.env` → `import.meta.env`, JSX inside `.js` files, a leftover PostCSS/Tailwind
+config, custom loaders, tsconfig path aliases, and the whole SSR/SSG question — is where
+migrations silently stall: the build goes green and the app misbehaves in ways no test
+catches. Every tool in this space is either path-specific (CRA-only), stale, or blindly
+transforms without flagging the parts that need a human. bundleferry was built to be the
+honest middle: **plan the mechanical part, name the judgment part, and refuse a false green.**
+
+**What it does — and doesn't.** bundleferry **plans and measures**; it does not silently
+rewrite your repo. You point it at a project, it detects the current bundler, rendering
+mode, and TypeScript posture, you pick a target, and it returns a plan split into three
+tiers — **green** (mechanical, safe to apply), **yellow** (transform but confirm), **red**
+(never auto-fix; decide each). SSR/SSG projects and React Native (Metro) are **routed away**
+(to Rspack/Astro/a meta-framework) rather than fake-converted. It also computes an honest
+**gzip total-transfer** size delta, because "Vite is smaller" is usually a myth on real apps.
+The mechanical (green) steps you then apply and build to verify — the loop-designer fail-safe:
+deny/ask, don't guess.
+
+**How it's built.** A zero-runtime-dependency **TypeScript** engine (`src/*.ts` → `dist/`,
+ships with emitted `.d.ts`). Three modules: `detect` (deterministic bundler + render-mode +
+TS detection), `plan` (the source×target matrix with green/yellow/red rules), `size`
+(normalized gzip/brotli measurement). Public API: `import { detect, plan, measure } from
+"bundleferry"`. Covered by 21 `node:test` cases exercising the honest edge cases (esbuild
+detected via an indirect `node build.js`, its false-positive guard, RN-as-non-web, the
+no-dead-cells matrix, tsup-is-red-for-a-SPA, TypeScript posture). Every migration rule was
+distilled from real migrations of real public repos — see the study table above and
+[CASES.md](CASES.md).
+
+**Status.** Early but honest. It plans and measures across 14 sources and 7 targets today;
+it does not yet auto-apply or run the build for you (by design — that stays your gated step).
+Contributions and correction reports welcome — the rules are a living file.
 
 ## Works in
 
