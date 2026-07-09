@@ -82,7 +82,55 @@ delta, not the "Vite always wins" myth.
 
 ---
 
-## Case 5 — SSR is routed, not converted (the fail-safe)
+## Case 5 — Rspack → Vite: TypeScript path aliases on a real repo
+
+[tolokoban/ast-viewer](https://github.com/tolokoban/ast-viewer) — a real `rspack.config.ts`
+CSR app. bundleferry said (verbatim):
+```
+bundleferry — ast-viewer
+  bundler: rspack   render: csr (client-rendered SPA (no SSR framework/entry detected))
+  TypeScript: TypeScript project (17 .ts/.tsx file(s), tsconfig.json, path aliases)
+```
+Notable: the TypeScript posture check fires on a real project — 17 `.ts/.tsx` files, a
+tsconfig, **and path aliases**, which the plan then flags as yellow (a bundler does not
+read `tsconfig.paths` by itself; you must mirror them in `resolve.alias` or add
+`vite-tsconfig-paths`).
+
+Built green on both sides. Size (verbatim `bundleferry --size`):
+`1.92 MB gzip → 1.86 MB gzip (-3.6%, smaller)`.
+
+---
+
+## Case 6 — Bun → Vite: the Web Worker is the whole migration
+
+[begoon/rapira](https://github.com/begoon/rapira) — a РАПИРА interpreter playground whose
+build script calls `Bun.build({ entrypoints, outdir })` with **two** entrypoints: the HTML
+page and a Web Worker module.
+
+bundleferry said (verbatim):
+```
+bundleferry — rapira
+  bundler: bun   render: csr (client-rendered SPA (no SSR framework/entry detected))
+  TypeScript: TypeScript project (11 .ts/.tsx file(s), tsconfig.json, path aliases)
+
+  Migration plan: Bun → Vite
+  green:
+    • Bun.build({ entrypoints, outdir }) → the target's entry/outDir
+    • Bun bundler is esbuild-like, so define/loader/target concepts carry over
+    • 11 .ts/.tsx file(s) — the target transpiles TS but does NOT type-check
+      fix: keep a separate "tsc --noEmit" step in CI/build; the bundler only strips types
+```
+The real gotcha, hit live: Bun emits `worker.js` **side-by-side**, so the source said
+`new Worker(new URL('./worker.js', import.meta.url))`. Vite resolves workers from the
+**source** file and fingerprints the chunk itself — so the entire migration was
+`./worker.js` → `./worker.ts` plus a `root: 'web'` config. Vite then emitted
+`assets/worker-Bqh3b-RM.js` on its own.
+
+Built green. Size (verbatim): `110.7 KB gzip → 108.9 KB gzip (-1.6%, smaller)`.
+
+---
+
+## Case 7 — SSR is routed, not converted (the fail-safe)
 
 bundleferry on a Next.js project said (verbatim):
 ```

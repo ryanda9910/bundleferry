@@ -2,6 +2,35 @@
 
 All notable changes to bundleferry are documented here.
 
+## [0.3.0] — 2026-07-09
+
+Full ecosystem coverage, tests, and two more real migration study cases.
+
+### Added
+- **Five more bundlers.** Sources: Rspack, Vite (migrate *away* from), Bun, Metro
+  (React Native / Expo), Turbopack. Target: Bun. The matrix is now **14 sources ×
+  7 targets** with no dead cells.
+- **Platform/framework gate.** Metro (RN/Expo) and Turbopack are *routed away* rather
+  than planned — they bundle for a platform or a framework, not a swappable web target.
+- **21 tests** (`node:test`) over the honest edge cases: esbuild detected via an indirect
+  `node build.js` and its false-positive guard, craco > cra precedence, RN-as-non-web,
+  the no-dead-cells matrix, browser-SPA→tsup is red, TypeScript posture, PostCSS
+  orphaned-vs-real, size measure/compare. `npm test` builds then runs.
+- **Two more end-to-end study cases**, both built green on real public repos:
+  Rspack ([tolokoban/ast-viewer](https://github.com/tolokoban/ast-viewer), −3.6% gzip,
+  surfaced real tsconfig path aliases) and Bun ([begoon/rapira](https://github.com/begoon/rapira),
+  −1.6% gzip, where the whole migration was a Web Worker reference `./worker.js` → `./worker.ts`).
+- **Support-matrix chart** and an **About / context** section in the README.
+
+### Fixed
+- **esbuild-as-source was undetectable** in the common case (invoked via a plain
+  `node build.js` that imports it, so its name never appears in package.json). Now
+  detected by reading the referenced build script — guarded so a plain `node build.js`
+  with no esbuild dep stays undetected.
+- A detected source with no explicit rules fell through to a dead "no source rules"
+  note. Every detected source now gets at least a generic unwind.
+- Deepened the thin plans for Snowpack, Gulp (task-runner vs bundler), Browserify, CRACO.
+
 ## [0.2.0] — 2026-07-09
 
 Multi-target, TypeScript-first rewrite.

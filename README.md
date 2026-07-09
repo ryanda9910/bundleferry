@@ -63,11 +63,12 @@ bundleferry — ./my-app
 2 red-tier item(s) — do not say "done" until each is decided.
 ```
 
-## End-to-end study: 4 real repos, one per bundler
+## End-to-end study: 6 real repos, one per bundler
 
-Not a mockup. bundleferry planned + migrated four real public GitHub repos to Vite,
-and **every migrated build went green.** Each was `npm install`ed and built for real
-(Node 24); the size column is the honest gzip total-transfer delta.
+Not a mockup. bundleferry planned + migrated six real public GitHub repos to Vite,
+and **every migrated build went green.** Each was installed and built for real (Node 24,
+Bun 1.3); the size column is the honest gzip total-transfer delta, measured by
+`bundleferry --size`.
 
 | Source bundler | Repo | Build | Size (gzip): old → Vite | Gotcha caught live |
 |---|---|---|---|---|
@@ -75,12 +76,19 @@ and **every migrated build went green.** Each was `npm install`ed and built for 
 | **webpack** | [webpack-boilerplate](https://github.com/twa-dev/webpack-boilerplate) | ✅ green | 52 KB → 53 KB (+1%) | orphaned `postcss.config` |
 | **CRA** | [create-react-phaser3-app](https://github.com/kevinshen56714/create-react-phaser3-app) | ✅ green | 320 KB → 336 KB (+5%) | `%PUBLIC_URL%` strip |
 | **Parcel** | [foody-monk](https://github.com/alokVerma749/foody-monk) | ✅ green | 139 KB → **127 KB (−9%)** | JSX-in-.js ×15, real Tailwind |
+| **Rspack** | [ast-viewer](https://github.com/tolokoban/ast-viewer) | ✅ green | 1.92 MB → **1.86 MB (−3.6%)** | TS path aliases (17 `.ts/.tsx`) |
+| **Bun** | [rapira](https://github.com/begoon/rapira) | ✅ green | 111 KB → **109 KB (−1.6%)** | Web Worker: `./worker.js` → `./worker.ts` |
 
-The honest headline: **3 of 4 got *larger* on Vite.** "Vite is smaller" is a myth on
-small apps (React bumps + older minifiers were tighter). Parcel shrank only because the
-app used `React.lazy()` and Vite honored the code-splitting Parcel had flattened. Each
-plan predicted the exact gotcha the real migration then hit. Full verbatim runs in
+The honest headline: **"Vite is smaller" is not a rule.** Three of the first four got
+*larger* (React version bumps + older minifiers were tighter on small apps); Parcel,
+Rspack and Bun each shrank slightly, and only for specific reasons — Parcel because the
+app used `React.lazy()` and Vite honored code-splitting Parcel had flattened. Each plan
+predicted the exact gotcha the real migration then hit. Full verbatim runs in
 **[CASES.md](CASES.md)**.
+
+Two bundlers deliberately have **no** migration case: **Metro (React Native)** and
+**Turbopack** — both are routed away by the render gate, because they are platform /
+framework bundlers, not web-bundler swaps.
 
 ## Use it
 
