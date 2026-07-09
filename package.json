@@ -1,6 +1,6 @@
 {
   "name": "bundleferry",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Ferry a JS/TS project across bundlers — plan a tiered migration between any bundler pair (webpack, CRA, Rollup, Parcel, esbuild → Vite, Rspack, esbuild, tsup, Rolldown) without sinking the build.",
   "type": "module",
   "bin": {

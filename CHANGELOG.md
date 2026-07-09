@@ -2,6 +2,45 @@
 
 All notable changes to bundleferry are documented here.
 
+## [0.4.0] — 2026-07-09
+
+`--advise`: recommend a bundler, and never report a number the source did not produce.
+
+### Added
+- **`bundleferry --advise <dir>`** — recommends a bundler, UI library and rendering mode, and
+  reports the build tool's security posture from **OpenSSF Scorecard** and **OSV** (both live,
+  keyless APIs). Flags: `--offline`, `--no-cache`, `--refresh`.
+- **A maker/verifier loop.** `propose()` emits `Claim`s, each carrying mandatory `provenance`.
+  An **independent** `verify()` re-resolves that provenance against what the adapter actually
+  returned. A claim asserting a score the source never produced is rejected, forced to red, and
+  printed as `UNVERIFIED — do not act on this`. Rejected claims are downgraded, never dropped.
+  The gate is real: **7 tests fail** if the verifier ever stops rejecting (proven by mutation).
+- **`src/evidence.ts`** — the only file that touches the network. Never throws: degradation is a
+  value (`offline` / `unreachable` / `no-data` / `timeout`). 24h file cache, best-effort writes,
+  and an `EvidenceEnv` injection seam so **no test opens a socket**. The timeout is enforced by
+  racing rather than delegated, so a `fetch` that ignores `signal` cannot hang the CLI.
+- **React Native / Expo advice.** Still routed, never auto-migrated, but it now names
+  [Re.Pack](https://github.com/callstack/repack) as the one real non-Metro path and warns that
+  adopting it leaves the officially supported Expo configuration.
+- **29 more tests** (25 → **54**).
+
+### The honesty rules, each enforced by a test
+- **No number exists → say so.** 3 of 9 bundler repos (rspack, bun, rolldown) have no Scorecard
+  entry. They report `no data exists`, never a zero.
+- **Scope the advisories.** Querying OSV without a version returns every advisory ever filed
+  (55 for `next`), most long fixed. The declared version is pinned (25 for `next@15.0.0`); when it
+  cannot be resolved, the output says the result is *not* scoped to the install.
+- **Never skip a check silently.** A bundler with no mapped repo/package reports `not checked`
+  rather than passing quietly — a security check that silently does not run is the worst outcome.
+  (This one was a real bug: `bun`'s 2 advisories and `@rspack/core`'s 1 were being hidden.)
+- **Offline is not an error.** It degrades to `unknown — could not reach the source` and exits 0.
+
+### Deliberately out of scope
+Backend stack (Go/Rust/Elixir/PHP), REST vs gRPC vs WebSocket, and algorithm optimization.
+Deriving true Big-O is undecidable in general, TechEmpower is archived (frozen 2026-03-24), and
+no authoritative source ranks one language against another — so bundleferry does not pretend to.
+Measured at 0.06 cosine similarity against bundleferry's own domain: a different tool.
+
 ## [0.3.1] — 2026-07-09
 
 Post-release audit. Every published claim was re-verified by running the tool, not by

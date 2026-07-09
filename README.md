@@ -104,6 +104,8 @@ node dist/cli.js ./my-app --target rspack    # plan to a chosen target
 node dist/cli.js --list-targets              # all targets
 node dist/cli.js --detect ./my-app           # bundler + render mode + TypeScript only
 node dist/cli.js --size old/dist new/dist    # honest gzip total-transfer delta
+node dist/cli.js --advise ./my-app           # recommend + security posture (cited, never guessed)
+node dist/cli.js --advise --offline ./my-app # same, no network — degrades to "unknown"
 ```
 
 **As a Claude Code skill** (also Codex, Cursor, Gemini CLI, opencode):
@@ -118,6 +120,52 @@ irm https://raw.githubusercontent.com/ryanda9910/bundleferry/main/install.ps1 | 
 Installs the skill into every coding agent it finds. `--project` also installs into the
 current repo's `.claude/`. Manual: copy [`skill/SKILL.md`](skill/SKILL.md) into your
 agent's skills/rules dir (`~/.claude/skills/bundleferry/SKILL.md`).
+
+## Advise: pick a bundler, and never trust an invented number
+
+```bash
+node dist/cli.js --advise ./my-app            # recommend + report security posture
+node dist/cli.js --advise --offline ./my-app  # no network; degrades to "unknown"
+```
+
+`--advise` recommends a bundler, UI library and rendering mode, and reports the build
+tool's security posture from **OpenSSF Scorecard** and **OSV** — both live, keyless APIs.
+It emits deterministic rules with citations, and **never invents a score.**
+
+That last claim is enforced, not promised. Every recommendation is a `Claim` carrying
+provenance, and an **independent verifier** re-resolves that provenance against what the
+adapter actually returned. A claim asserting a number the source never produced is
+rejected, forced to red, and printed as `UNVERIFIED — do not act on this`:
+
+```
+  green:
+    • OpenSSF Scorecard for the current bundler: 6.8/10
+      [openssf-scorecard 2026-07-06 v5.5.1-0.202]
+    • OpenSSF Scorecard: no data exists for this project — no number to report
+      [rule:no-scorecard-data]
+  red:
+    • 25 OSV advisory(ies) affecting the declared version 15.0.0: GHSA-36qx-fr4f-26g5, +19 more
+      [osv.dev]
+```
+
+Three honesty rules the tool holds itself to, each with a test that fails without it:
+
+- **No number exists → say so.** 3 of 9 bundler repos (rspack, bun, rolldown) have no
+  Scorecard entry at all. They report *"no data exists"*, never a zero.
+- **Scope the advisories.** Asking OSV without a version returns every advisory ever filed
+  (55 for `next`), most long fixed. bundleferry pins the declared version (25 for
+  `next@15.0.0`) and, when it cannot, says the result is *not* scoped to your install.
+- **Never skip a check silently.** A bundler with no mapped package reports *"not checked"*
+  rather than passing quietly. A security check that quietly does not run is the worst outcome.
+
+Offline is not an error: it degrades to *"unknown — could not reach the source"* and still
+exits 0, so it stays usable in CI. **React Native / Expo** is routed, not migrated — it names
+[Re.Pack](https://github.com/callstack/repack) as the one real non-Metro path and warns that
+adopting it leaves the officially supported Expo configuration.
+
+Deliberately **out of scope**: backend stack, REST/gRPC/WebSocket, and algorithm
+optimization. Deriving true Big-O is undecidable in general, and no authoritative source
+ranks Go against Elixir — so bundleferry does not pretend to.
 
 ## Support matrix
 
@@ -172,19 +220,23 @@ The mechanical (green) steps you then apply and build to verify — the loop-des
 deny/ask, don't guess.
 
 **How it's built.** A zero-runtime-dependency **TypeScript** engine (`src/*.ts` → `dist/`,
-ships with emitted `.d.ts`). Three modules: `detect` (deterministic bundler + render-mode +
+ships with emitted `.d.ts`). Five modules: `detect` (deterministic bundler + render-mode +
 TS detection), `plan` (the source×target matrix with green/yellow/red rules), `size`
-(normalized gzip/brotli measurement). Public API: `import { detect, plan, measure } from
-"bundleferry"`. Covered by 21 `node:test` cases exercising the honest edge cases (esbuild
-detected via an indirect `node build.js`, its false-positive guard, RN-as-non-web, the
-no-dead-cells matrix, tsup-is-red-for-a-SPA, TypeScript posture). Every migration rule was
-distilled from real migrations of real public repos — see the study table above and
-[CASES.md](CASES.md).
+(normalized gzip/brotli measurement), `evidence` (the only file that touches the network —
+OpenSSF Scorecard + OSV, with a cache, an offline path, and an injection seam so no test
+opens a socket), and `advise` (a maker proposes, an independent verifier rejects any
+uncited claim). Public API: `import { detect, plan, measure, advise } from "bundleferry"`.
+Covered by **54 `node:test` cases** exercising the honest edge cases (esbuild detected via
+an indirect `node build.js`, its false-positive guard, Turborepo-is-not-Turbopack, the
+no-dead-cells matrix, tsup-is-red-for-a-SPA, and seven that fail if the verifier ever stops
+rejecting a hallucinated score). Every migration rule was distilled from real migrations of
+real public repos — see the study table above and [CASES.md](CASES.md).
 
 **Status.** Early but honest. It plans and measures across 15 detected sources (14 matrix rows —
-Next and Turbopack share one, because both route identically) and 7 targets today;
-it does not yet auto-apply or run the build for you (by design — that stays your gated step).
-Contributions and correction reports welcome — the rules are a living file.
+Next and Turbopack share one, because both route identically) and 7 targets today, and advises
+with cited evidence or an explicit "no number exists". It does not auto-apply or run the build
+for you (by design — that stays your gated step). Contributions and correction reports welcome —
+the rules are a living file.
 
 ## Works in
 

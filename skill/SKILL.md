@@ -9,7 +9,13 @@ description: >-
   rendering mode, and TypeScript posture, lets you choose the target, plans the move in three tiers
   (green auto-safe, yellow confirm, red human punch-list), routes SSR/SSG away instead of blindly
   converting it, and refuses to say "done" while a red-tier blocker is unaddressed. It plans + measures;
-  the mechanical steps you then apply and build to verify.
+  the mechanical steps you then apply and build to verify. An advise mode (`--advise`) recommends a
+  bundler, UI library and rendering mode for a project and reports the build tool's security posture
+  from OpenSSF Scorecard and OSV — deterministic rules with citations only, never an invented score.
+  Every recommendation carries provenance and is checked by an independent verifier that rejects any
+  uncited claim; where no number exists it says so rather than guessing. React Native / Expo is routed,
+  not migrated: it names Re.Pack as the only real non-Metro path and warns that adopting it leaves the
+  officially supported Expo configuration. Works offline, degrading to "unknown — could not reach the source".
 ---
 
 # bundleferry — ferry your project across bundlers without sinking

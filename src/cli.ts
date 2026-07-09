@@ -14,7 +14,9 @@ import * as path from 'node:path';
 import { detect } from './detect.js';
 import { plan, TARGETS, targetLabel } from './plan.js';
 import * as size from './size.js';
-import type { MigratePlan, TargetBundler, Tier } from './types.js';
+import { runAdvise } from './advise.js';
+import { defaultEnv } from './evidence.js';
+import type { AdviseOptions, Claim, DetectResult, MigratePlan, TargetBundler, Tier } from './types.js';
 
 const tty = process.stdout.isTTY;
 const C = tty
@@ -39,6 +41,62 @@ function sizeMode(oldDir: string, newDir: string): never {
   console.log(`  ${col}${C.b}${cmp.line}${C.x}`);
   console.log(`${C.d}  (gzip total-transfer is the honest number — chunk counts differ across bundlers)${C.x}`);
   process.exit(0);
+}
+
+/**
+ * The advise branch. It is the only async path — every other mode keeps its
+ * synchronous `process.exit` semantics, so nothing else changes behaviour.
+ * Exits on its own; `main()` returns immediately after calling it.
+ */
+function adviseMode(d: DetectResult): void {
+  const argv = process.argv.slice(2);
+  const opts: AdviseOptions = {
+    offline: argv.includes('--offline'),
+    noCache: argv.includes('--no-cache'),
+    refresh: argv.includes('--refresh'),
+  };
+
+  runAdvise(d, defaultEnv(), opts)
+    .then((a) => {
+      console.log(`\n  ${C.b}Advice${C.x}${a.degraded ? ` ${C.d}(some evidence unavailable)${C.x}` : ''}\n`);
+
+      const byTier: Record<Tier, Claim[]> = { green: [], yellow: [], red: [] };
+      for (const c of a.claims) byTier[c.tier].push(c);
+
+      for (const t of ['green', 'yellow', 'red'] as Tier[]) {
+        if (!byTier[t].length) continue;
+        console.log(`  ${TIER[t]}:`);
+        for (const c of byTier[t]) {
+          console.log(`    • ${c.msg}`);
+          if (c.fix) console.log(`      ${C.d}fix: ${c.fix}${C.x}`);
+          console.log(`      ${C.d}[${provenanceLine(c)}]${C.x}`);
+        }
+        console.log('');
+      }
+
+      if (a.redGate) {
+        console.log(`${C.r}${C.b}red-tier item(s) — do not say "done" until each is decided.${C.x}`);
+        process.exit(1);
+      }
+      console.log(`${C.g}${C.b}green/yellow only — every claim above resolved to a real source.${C.x}`);
+      process.exit(0);
+    })
+    .catch((e: unknown) => {
+      console.error(`advise failed: ${(e as Error)?.message ?? String(e)}`);
+      process.exit(1);
+    });
+}
+
+/** Renders where a claim came from, so the reader can check it themselves. */
+function provenanceLine(c: Claim): string {
+  if (c.verified === false) return `rejected: ${c.verifierNote ?? 'unverified'}`;
+  const p = c.provenance;
+  if (p.source === 'openssf-scorecard') {
+    return `openssf-scorecard${p.reportedAt ? ` ${p.reportedAt}` : ''}${p.version ? ` ${p.version.slice(0, 12)}` : ''}`;
+  }
+  if (p.source === 'osv') return 'osv.dev';
+  if (p.source === 'benchmark-repo') return p.citation;
+  return p.citation;
 }
 
 function main(): void {
@@ -69,6 +127,8 @@ function main(): void {
   console.log(`  ${d.typescript.isTypeScript ? C.b + 'TypeScript' + C.x : C.d + 'JavaScript' + C.x}: ${C.d}${d.typescript.note}${C.x}`);
   if (d.ranked.length > 1) console.log(`  ${C.d}also matched: ${d.ranked.slice(1).map((m) => m.name).join(', ')}${C.x}`);
   if (detectOnly) process.exit(0);
+
+  if (argv.includes('--advise')) { adviseMode(d); return; }
 
   const p = plan(d, dir, targetArg);
 

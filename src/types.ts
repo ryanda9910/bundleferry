@@ -65,6 +65,87 @@ export interface MigratePlan {
 
 export type Plan = RoutePlan | MigratePlan;
 
+// ---------------------------------------------------------------------------
+// advise mode — every claim carries provenance, and an independent verifier
+// re-resolves that provenance against real adapter output. A claim asserting a
+// number the adapter never returned is rejected. That is what makes "never
+// invent a score" enforceable rather than aspirational.
+// ---------------------------------------------------------------------------
+
+export type EvidenceSource = 'openssf-scorecard' | 'osv' | 'benchmark-repo' | 'rule';
+
+export interface Provenance {
+  source: EvidenceSource;
+  /** URL, repo slug, or the deterministic rule id. Never empty. */
+  citation: string;
+  /** The live URL actually queried. Absent for pure rules. */
+  url?: string;
+  /** The date the source itself reported (e.g. Scorecard's `date`). */
+  reportedAt?: string;
+  /** Scorecard's own version string. Reported verbatim, never rescaled. */
+  version?: string;
+  /** When we fetched or served it from cache. */
+  fetchedAt?: string;
+}
+
+/** Structurally a superset of Step, so the CLI's tier renderer accepts it. */
+export interface Claim {
+  tier: Tier;
+  id: string;
+  msg: string;
+  fix?: string;
+  /** A numeric value copied verbatim from a source. Must match the adapter. */
+  score?: number;
+  /** Advisory ids asserted by this claim. Must exist in the adapter output. */
+  advisoryIds?: string[];
+  provenance: Provenance;
+  /** Set by the verifier. Uncited or unresolved => false. */
+  verified?: boolean;
+  /** Why the verifier rejected or downgraded this claim. */
+  verifierNote?: string;
+}
+
+export type DegradeReason = 'offline' | 'unreachable' | 'no-data' | 'timeout';
+
+/** `ok:false` means degraded. Adapters never throw; degradation is a value. */
+export interface EvidenceResult {
+  ok: boolean;
+  url: string;
+  /** Verbatim score when the source has one. Never synthesized. */
+  score?: number;
+  reportedAt?: string;
+  version?: string;
+  reason?: DegradeReason;
+  advisories?: Array<{ id: string; summary: string }>;
+  fetchedAt?: string;
+}
+
+export interface SecurityPosture {
+  /** null when the bundler has no known repo slug. */
+  scorecard: EvidenceResult | null;
+  osv: EvidenceResult | null;
+  /** The concrete version OSV was queried with, when one could be resolved. */
+  pinnedVersion?: string;
+}
+
+export interface AdviseOptions {
+  offline: boolean;
+  noCache: boolean;
+  refresh: boolean;
+}
+
+export interface AdvisePlan {
+  route: false;
+  kind: 'advise';
+  /** Verified and rejected claims both appear. Rejected ones are downgraded, never dropped. */
+  claims: Claim[];
+  posture: SecurityPosture;
+  /** A verified red claim survived, or the verifier downgraded something. */
+  redGate: boolean;
+  /** Network was needed but unavailable; results are honestly incomplete. */
+  degraded: boolean;
+}
+
 export interface PackageJson {
   name?: string;
   type?: string;
