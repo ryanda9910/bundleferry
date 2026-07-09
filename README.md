@@ -54,9 +54,24 @@ bundleferry — ./my-app
 2 red-tier item(s) — do not say "done" until each is decided.
 ```
 
-## Real runs
+## End-to-end study: 4 real repos, one per bundler
 
-Not a mockup. Actual bundleferry runs in Claude Code — see **[CASES.md](CASES.md)**.
+Not a mockup. bundleferry planned + migrated four real public GitHub repos to Vite,
+and **every migrated build went green.** Each was `npm install`ed and built for real
+(Node 24); the size column is the honest gzip total-transfer delta.
+
+| Source bundler | Repo | Build | Size (gzip): old → Vite | Gotcha caught live |
+|---|---|---|---|---|
+| **Rollup** | [babel-react-rollup-starter](https://github.com/yamafaktory/babel-react-rollup-starter) | ✅ green | 31 KB → 45 KB (+44%) | JSX-in-.js → rename `.jsx` |
+| **webpack** | [webpack-boilerplate](https://github.com/twa-dev/webpack-boilerplate) | ✅ green | 52 KB → 53 KB (+1%) | orphaned `postcss.config` |
+| **CRA** | [create-react-phaser3-app](https://github.com/kevinshen56714/create-react-phaser3-app) | ✅ green | 320 KB → 336 KB (+5%) | `%PUBLIC_URL%` strip |
+| **Parcel** | [foody-monk](https://github.com/alokVerma749/foody-monk) | ✅ green | 139 KB → **127 KB (−9%)** | JSX-in-.js ×15, real Tailwind |
+
+The honest headline: **3 of 4 got *larger* on Vite.** "Vite is smaller" is a myth on
+small apps (React bumps + older minifiers were tighter). Parcel shrank only because the
+app used `React.lazy()` and Vite honored the code-splitting Parcel had flattened. Each
+plan predicted the exact gotcha the real migration then hit. Full verbatim runs in
+**[CASES.md](CASES.md)**.
 
 ## Install
 
