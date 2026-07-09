@@ -1,13 +1,15 @@
 ---
 name: bundleferry
 description: >-
-  Ferry a JS project across bundlers (webpack, CRA, Rollup, Parcel → Vite) without sinking the build.
-  Triggers automatically when you are asked to migrate a bundler, switch build tools, or fix a build that
-  a dependency upgrade suddenly broke (or on /bundleferry). A migration is never fully mechanical — env
-  rewrites, JSX-in-.js, custom loaders, and SSR each hide a decision — so bundleferry detects the current
-  bundler and rendering mode, plans the move in three tiers (green auto-safe, yellow confirm, red human
-  punch-list), routes SSR/SSG away instead of blindly converting it, verifies the new build goes green, and
-  refuses to say "done" while a red-tier blocker is unaddressed.
+  Ferry a JS/TS project across bundlers without sinking the build — plan a migration between any pair
+  (webpack, CRA, Rollup, Parcel, esbuild, Snowpack, Gulp, Browserify → Vite, Rspack, esbuild, tsup,
+  Rolldown, Parcel). Triggers when you are asked to migrate a bundler, switch build tools, or pick a
+  target (or on /bundleferry). A migration is never fully mechanical — env rewrites, JSX-in-.js, custom
+  loaders, tsconfig paths, and SSR each hide a decision — so bundleferry detects the current bundler,
+  rendering mode, and TypeScript posture, lets you choose the target, plans the move in three tiers
+  (green auto-safe, yellow confirm, red human punch-list), routes SSR/SSG away instead of blindly
+  converting it, and refuses to say "done" while a red-tier blocker is unaddressed. It plans + measures;
+  the mechanical steps you then apply and build to verify.
 ---
 
 # bundleferry — ferry your project across bundlers without sinking

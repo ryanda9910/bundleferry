@@ -4,7 +4,7 @@
 
 <h1 align="center">bundleferry</h1>
 
-<p align="center"><b>Ferry your JS project across bundlers (webpack, CRA, Rollup, Parcel to Vite) without sinking the build.</b></p>
+<p align="center"><b>Ferry your JS/TS project across bundlers — plan a migration between any pair, without sinking the build.</b></p>
 
 <p align="center">
   🇺🇸 English · <a href="README.id.md">🇮🇩 Bahasa Indonesia</a> · <a href="README.zh-CN.md">🇨🇳 简体中文</a>
@@ -24,10 +24,19 @@
 bundleferry is the deckhand for a bundler migration in Claude Code (also Codex,
 Cursor, Gemini CLI, opencode). Switching bundlers looks like a config swap and isn't:
 the config translates ~80% of the way, and the last 20% — `process.env`, JSX-in-`.js`,
-a leftover PostCSS config, custom loaders, SSR — is where every real migration silently
-stalls with a green build that behaves wrong. bundleferry detects the bundler + rendering
-mode, plans the crossing in three tiers, routes SSR away instead of faking it, and won't
-let you call it done while the boat's still taking on water. Zero-dep, deterministic.
+a leftover PostCSS config, custom loaders, tsconfig paths, SSR — is where every real
+migration silently stalls with a green build that behaves wrong. bundleferry detects the
+bundler, rendering mode, and TypeScript posture, lets you **pick the target**, plans the
+crossing in three tiers, routes SSR away instead of faking it, and won't let you call it
+done while the boat's still taking on water.
+
+**It plans + measures — it does not silently rewrite your repo.** You get a tiered,
+target-aware plan and an honest size delta; the mechanical (green) steps you then apply
+and build to verify. Written in TypeScript, ships typed. No runtime dependency.
+
+**Sources:** webpack · CRA · CRACO · Rollup · Parcel · esbuild · Snowpack · Gulp · Browserify
+**Targets:** Vite · Rspack · esbuild · tsup · Rolldown · Parcel  — `bundleferry <dir> --target <name>`
+(pick Rspack to keep webpack semantics, tsup/Rolldown for libraries, Vite for a CSR SPA).
 
 ## Before / After
 
@@ -73,22 +82,33 @@ app used `React.lazy()` and Vite honored the code-splitting Parcel had flattened
 plan predicted the exact gotcha the real migration then hit. Full verbatim runs in
 **[CASES.md](CASES.md)**.
 
-## Install
+## Use it
+
+**As a CLI** (TypeScript engine, build once):
+
+```bash
+git clone https://github.com/ryanda9910/bundleferry && cd bundleferry
+npm install && npm run build
+
+node dist/cli.js ./my-app                    # plan a migration to Vite (default)
+node dist/cli.js ./my-app --target rspack    # plan to a chosen target
+node dist/cli.js --list-targets              # all targets
+node dist/cli.js --detect ./my-app           # bundler + render mode + TypeScript only
+node dist/cli.js --size old/dist new/dist    # honest gzip total-transfer delta
+```
+
+**As a Claude Code skill** (also Codex, Cursor, Gemini CLI, opencode):
 
 ```bash
 # macOS / Linux / WSL
 curl -fsSL https://raw.githubusercontent.com/ryanda9910/bundleferry/main/install.sh | bash
-
 # Windows (PowerShell)
 irm https://raw.githubusercontent.com/ryanda9910/bundleferry/main/install.ps1 | iex
 ```
 
-Finds every coding agent you have and installs the skill into each. ~10 seconds,
-safe to re-run. `--project` also installs into the current repo's `.claude/`. No
-key, no account, no dependency.
-
-Manual: copy [`skill/SKILL.md`](skill/SKILL.md) into your agent's skills/rules dir
-(Claude Code: `~/.claude/skills/bundleferry/SKILL.md`).
+Installs the skill into every coding agent it finds. `--project` also installs into the
+current repo's `.claude/`. Manual: copy [`skill/SKILL.md`](skill/SKILL.md) into your
+agent's skills/rules dir (`~/.claude/skills/bundleferry/SKILL.md`).
 
 ## Documentation
 
