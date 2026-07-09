@@ -34,8 +34,23 @@ const BUNDLERS: BundlerRule[] = [
   { name: 'gulp', configs: ['gulpfile.js', 'gulpfile.mjs', 'gulpfile.babel.js'], deps: ['gulp'], script: /\bgulp\b/, weak: true },
   { name: 'rollup', configs: ['rollup.config.js', 'rollup.config.mjs', 'rollup.config.ts'], deps: ['rollup'], script: /\brollup\b/, weak: true },
   { name: 'browserify', configs: [], deps: ['browserify'], script: /\bbrowserify\b/, weak: true },
-  { name: 'esbuild', configs: ['esbuild.config.js', 'esbuild.config.mjs'], deps: ['esbuild'], script: /\besbuild\b/, weak: true },
+  { name: 'esbuild', configs: ['esbuild.config.js', 'esbuild.config.mjs', 'esbuild.config.ts'], deps: ['esbuild'], script: /\besbuild\b/, weak: true },
 ];
+
+// esbuild is commonly invoked from a plain `node build.js` script that imports it,
+// so its literal name never appears in package.json. If the esbuild dep is present and
+// the build script runs a local JS file that imports esbuild, treat it as an esbuild build.
+function esbuildViaBuildScript(dir: string, pkg: PackageJson): boolean {
+  const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+  if (!('esbuild' in deps)) return false;
+  const build = pkg.scripts?.build ?? '';
+  const m = build.match(/node\s+([\w./-]+\.(?:m?js|c?js))/);
+  if (!m || !m[1]) return false;
+  try {
+    const src = fs.readFileSync(path.join(dir, m[1]), 'utf8');
+    return /require\(['"]esbuild['"]\)|from\s+['"]esbuild['"]|import\s+.*esbuild/.test(src);
+  } catch { return false; }
+}
 
 function detectBundler(dir: string): { primary: SourceBundler | null; ranked: DetectResult['ranked']; pkg: PackageJson } {
   const pkg = readJSON(path.join(dir, 'package.json')) ?? {};
@@ -50,12 +65,14 @@ function detectBundler(dir: string): { primary: SourceBundler | null; ranked: De
     const inScript = b.script.test(scripts);
     const inBuild = b.script.test(buildScript);
     const pkgField = b.pkgField ? b.pkgField(pkg) : false;
-    const signal = b.weak ? (hasConfig || inScript) : (hasConfig || hasDep || inScript || pkgField);
+    const indirect = b.name === 'esbuild' && esbuildViaBuildScript(dir, pkg);
+    const signal = b.weak ? (hasConfig || inScript || indirect) : (hasConfig || hasDep || inScript || pkgField);
     if (signal) {
       let score = 0;
       if (inBuild) score += 4;
       if (hasConfig) score += 3;
       if (inScript) score += 2;
+      if (indirect) score += 2;
       if (hasDep) score += 1;
       if (pkgField) score += 1;
       matches.push({ name: b.name, score, hasConfig, hasDep, inScript });

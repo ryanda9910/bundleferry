@@ -67,10 +67,30 @@ const SOURCE_UNWIND: Record<string, { label: string; green: string[]; yellow: st
     yellow: ['a hand-written build script → the target\'s config file', 'splitting → the target\'s code-split model'],
     red: ['custom esbuild plugins with no target equivalent'],
   },
-  craco: { label: 'CRACO', green: ['craco webpack.alias/style/devServer overrides → the target keys'], yellow: ['craco.configure custom webpack → target plugins (case by case)'], red: ['craco plugins wrapping webpack internals with no equivalent'] },
-  snowpack: { label: 'Snowpack', green: ['mount/alias → the target\'s root/alias'], yellow: ['snowpack plugins → target plugins'], red: ['Snowpack is unmaintained — some plugins have no successor'] },
-  gulp: { label: 'Gulp', green: [], yellow: ['task-based build → a real bundler config (conceptual rewrite)'], red: ['Gulp is a task runner, not a bundler — most pipelines need a full rethink, not a config map'] },
-  browserify: { label: 'Browserify', green: ['entry → the target\'s entry'], yellow: ['transforms (babelify) → the target\'s transform'], red: ['Browserify-specific transforms with no modern equivalent'] },
+  craco: {
+    label: 'CRACO',
+    green: ['craco webpack.alias → the target\'s resolve.alias', 'craco style (CSS Modules / PostCSS / Sass) → the target\'s native CSS', 'craco devServer → the target\'s server config'],
+    yellow: ['craco.configure custom webpack → target plugins (case by case)', 'craco babel overrides → the target\'s React/TS transform', 'CRA underneath still applies (index.html move, JSX-in-.js, REACT_APP_ env)'],
+    red: ['craco plugins that wrap webpack internals with no equivalent', 'react-app-rewired hacks'],
+  },
+  snowpack: {
+    label: 'Snowpack',
+    green: ['mount → the target\'s root/publicDir', 'alias → resolve.alias', 'buildOptions.out → the target\'s outDir', 'Snowpack is ESM-first, so the module graph already suits Vite/Rollup targets'],
+    yellow: ['snowpack plugins (@snowpack/plugin-react-refresh, etc.) → target plugins', 'SNOWPACK_PUBLIC_ env vars → the target\'s env convention', 'import.meta.env already used by Snowpack → maps cleanly to Vite'],
+    red: ['Snowpack is unmaintained (archived 2022) — some plugins have no successor and must be reimplemented'],
+  },
+  gulp: {
+    label: 'Gulp',
+    green: ['src/dest globs → the target\'s entry/outDir (only the bundling task, not the whole pipeline)'],
+    yellow: ['gulp-babel/gulp-sass/gulp-uglify steps → the target\'s built-in transform + minify', 'gulp-concat → the bundler\'s own bundling (drop manual concat)'],
+    red: ['Gulp is a TASK RUNNER, not a bundler — image/sprite/copy/lint/deploy tasks do NOT map to a bundler and must stay in a task runner or move to npm scripts. Only the JS/CSS bundling step migrates; treat the rest as a separate decision.'],
+  },
+  browserify: {
+    label: 'Browserify',
+    green: ['entry (b.add / main) → the target\'s entry', 'output bundle → the target\'s outDir'],
+    yellow: ['babelify / other transforms → the target\'s native transform', 'CommonJS source is fine for Rollup/Vite targets but confirm no dynamic require()', 'node core shims (browserify auto-polyfilled) → add a node-polyfills plugin if the code needs them'],
+    red: ['Browserify-specific transforms with no modern equivalent', 'heavy reliance on node core in the browser (browserify hid this) — surfaces as externalized-module errors'],
+  },
 };
 
 // ---- what each TARGET bundler needs on arrival (target-specific caveats) ----
@@ -167,9 +187,14 @@ export function plan(detected: DetectResult, dir: string, target: TargetBundler)
   if (!bundler) return { route: false, from: 'unknown', to: target, steps: [], note: 'No known bundler detected.' } as MigratePlan;
   if (bundler === (target as unknown as SourceBundler)) return { route: false, from: TARGET_LABELS[target], to: target, steps: [], alreadyThere: true, note: `Already on ${TARGET_LABELS[target]}.` } as MigratePlan;
 
-  const unwind = SOURCE_UNWIND[bundler];
   const arrive = TARGET_ARRIVE[target];
-  if (!unwind) return { route: false, from: bundler, to: target, steps: [], note: `No source rules yet for: ${bundler}` } as MigratePlan;
+  // Every detected source gets at least a generic unwind so the matrix has no dead cells.
+  const unwind = SOURCE_UNWIND[bundler] ?? {
+    label: bundler,
+    green: ['map the entry/output/alias config to the target\'s equivalents'],
+    yellow: ['translate this bundler\'s plugins/transforms to the target\'s'],
+    red: [`${bundler}-specific features with no direct target equivalent — verify each by hand`],
+  };
 
   const steps: Step[] = [];
   for (const g of arrive.green) steps.push({ tier: 'green', id: 'arrive', msg: g });
