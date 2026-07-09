@@ -4,7 +4,7 @@
 
 <h1 align="center">bundleferry</h1>
 
-<p align="center"><b>Seberangkan project JS-mu antar bundler (webpack, CRA, Rollup, Parcel ke Vite) tanpa build-nya tenggelam.</b></p>
+<p align="center"><b>Seberangkan project JS/TS-mu antar bundler mana pun, tanpa build-nya tenggelam.</b></p>
 
 <p align="center">
   <a href="README.md">🇺🇸 English</a> · 🇮🇩 Bahasa Indonesia · <a href="README.zh-CN.md">🇨🇳 简体中文</a>
@@ -16,12 +16,23 @@
 
 bundleferry adalah "awak kapal" untuk migrasi bundler di Claude Code (juga Codex,
 Cursor, Gemini CLI, opencode). Ganti bundler kelihatannya cuma tukar config, padahal
-tidak: config-nya beres ~80%, sisanya yang 20% — `process.env`, JSX di file `.js`, config
-PostCSS sisa, custom loader, SSR — justru tempat tiap migrasi diam-diam mandek dengan
-build hijau tapi kelakuannya salah. bundleferry deteksi bundler + mode rendering, susun
+tidak: config-nya beres sekitar 80%, sisanya yang 20% (`process.env`, JSX di file `.js`,
+config PostCSS sisa, custom loader, path alias tsconfig, SSR) justru tempat tiap migrasi
+diam-diam mandek dengan build hijau tapi kelakuannya salah. bundleferry deteksi bundler,
+mode rendering, dan posture TypeScript, kamu **pilih sendiri target-nya**, lalu ia susun
 rencananya dalam tiga tingkat (hijau otomatis, kuning konfirmasi, merah punch-list
 manusia), route SSR/SSG (bukan dipaksa convert), dan menolak bilang "selesai" selama masih
-ada blocker merah. Zero-dep, deterministik.
+ada blocker merah. Ditulis dengan TypeScript, tanpa dependency runtime.
+
+**Ia menyusun rencana dan mengukur, bukan diam-diam menulis ulang repo-mu.** Langkah hijau
+yang mekanis kamu terapkan sendiri lalu build untuk membuktikannya.
+
+**Sumber:** webpack · CRA · CRACO · Rollup · Parcel · esbuild · Snowpack · Gulp · Browserify · Rspack · Vite · Bun · Metro\* · Turbopack\*
+**Target:** Vite · Rspack · esbuild · tsup · Rolldown · Parcel · Bun  — `bundleferry <dir> --target <nama>`
+\* Metro dan Turbopack dideteksi lalu **di-route**, bukan dimigrasi (keduanya bundler platform/framework, bukan tukar bundler web biasa).
+
+Matriks lengkap 14 baris sumber x 7 target, tabel studi kasus 6 repo nyata, dan bagian
+About ada di [README bahasa Inggris](README.md).
 
 ## Sebelum / Sesudah
 

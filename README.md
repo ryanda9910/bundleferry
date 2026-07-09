@@ -34,9 +34,10 @@ done while the boat's still taking on water.
 target-aware plan and an honest size delta; the mechanical (green) steps you then apply
 and build to verify. Written in TypeScript, ships typed. No runtime dependency.
 
-**Sources:** webpack · CRA · CRACO · Rollup · Parcel · esbuild · Snowpack · Gulp · Browserify
-**Targets:** Vite · Rspack · esbuild · tsup · Rolldown · Parcel  — `bundleferry <dir> --target <name>`
+**Sources:** webpack · CRA · CRACO · Rollup · Parcel · esbuild · Snowpack · Gulp · Browserify · Rspack · Vite · Bun · Metro\* · Turbopack\*
+**Targets:** Vite · Rspack · esbuild · tsup · Rolldown · Parcel · Bun  — `bundleferry <dir> --target <name>`
 (pick Rspack to keep webpack semantics, tsup/Rolldown for libraries, Vite for a CSR SPA).
+\* Metro and Turbopack are detected and **routed**, not migrated — see [Support matrix](#support-matrix).
 
 ## Before / After
 
@@ -180,7 +181,8 @@ no-dead-cells matrix, tsup-is-red-for-a-SPA, TypeScript posture). Every migratio
 distilled from real migrations of real public repos — see the study table above and
 [CASES.md](CASES.md).
 
-**Status.** Early but honest. It plans and measures across 14 sources and 7 targets today;
+**Status.** Early but honest. It plans and measures across 15 detected sources (14 matrix rows —
+Next and Turbopack share one, because both route identically) and 7 targets today;
 it does not yet auto-apply or run the build for you (by design — that stays your gated step).
 Contributions and correction reports welcome — the rules are a living file.
 

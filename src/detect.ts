@@ -28,8 +28,10 @@ const BUNDLERS: BundlerRule[] = [
   { name: 'metro', configs: ['metro.config.js', 'metro.config.cjs'], deps: ['metro', 'react-native', '@react-native/metro-config', 'expo'], script: /\b(metro|react-native|expo)\b/ },
   { name: 'craco', configs: ['craco.config.js', 'craco.config.cjs'], deps: ['@craco/craco'], script: /\bcraco\b/ },
   { name: 'cra', configs: [], deps: ['react-scripts'], script: /\breact-scripts\b/ },
-  // Turbopack is Next's bundler when dev/build run with --turbo (or Next 15+ default).
-  { name: 'turbopack', configs: [], deps: ['turbo'], script: /--turbo\b|next\s+(dev|build)\s+--turbopack/ },
+  // Turbopack is Next's bundler when dev/build run with --turbo(pack). It ships INSIDE Next
+  // and has no standalone dep — the npm package `turbo` is Turborepo, a task runner, so it
+  // must never be a signal here (a plain Turborepo monorepo is not a Turbopack project).
+  { name: 'turbopack', configs: [], deps: [], script: /\bnext\s+(dev|build)\b[^&|]*--turbo(pack)?\b/ },
   { name: 'next', configs: ['next.config.js', 'next.config.mjs', 'next.config.ts'], deps: ['next'], script: /\bnext\b/ },
   { name: 'rspack', configs: ['rspack.config.js', 'rspack.config.ts', 'rspack.config.mjs'], deps: ['@rspack/core', '@rspack/cli'], script: /\brspack\b/ },
   { name: 'vite', configs: ['vite.config.js', 'vite.config.ts', 'vite.config.mjs'], deps: ['vite'], script: /\bvite\b/ },

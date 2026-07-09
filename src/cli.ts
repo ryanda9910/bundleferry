@@ -9,6 +9,7 @@
 //
 // Deterministic, zero runtime dependency. Exit 1 on a red-tier blocker or SSR route.
 
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { detect } from './detect.js';
 import { plan, TARGETS, targetLabel } from './plan.js';
@@ -58,6 +59,9 @@ function main(): void {
     console.error(`unknown target "${targetArg}". valid: ${TARGETS.join(', ')}`); process.exit(2);
   }
   const dir = path.resolve(argv.find((a) => !a.startsWith('--') && a !== targetArg) ?? '.');
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+    console.error(`not a directory: ${dir}`); process.exit(2);
+  }
 
   const d = detect(dir);
   console.log(`${C.b}bundleferry${C.x} ${C.d}— ${dir}${C.x}`);

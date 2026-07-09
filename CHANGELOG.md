@@ -2,6 +2,39 @@
 
 All notable changes to bundleferry are documented here.
 
+## [0.3.1] — 2026-07-09
+
+Post-release audit. Every published claim was re-verified by running the tool, not by
+reading the code — which surfaced one real detection bug and several stale docs.
+
+### Fixed
+- **Turborepo was misdetected as Turbopack.** The rule matched the npm dep `turbo`, but
+  `turbo` *is* Turborepo (a task runner); Turbopack ships inside Next and has no standalone
+  dep. A plain Turborepo monorepo root was reported as `bundler: turbopack`, forced to
+  `render: ssr`, and refused with a Next.js SSR route + exit 1. Turbopack is now matched
+  only by its build script (`next dev|build … --turbopack`), and the dep signal is gone.
+- **The CLI accepted a path that does not exist**, printing a confident
+  "No known bundler detected." and exiting 0. It now errors with `not a directory: <path>`
+  and exits 2.
+- **`docs/customizing.md` pointed at `lib/plan.js` and `lib/detect.js`** — both deleted in
+  the v0.2 TypeScript rewrite. Rewritten against the real `src/` layout (`SOURCE_UNWIND`,
+  `TARGET_ARRIVE`, `sharedChecks`, `tsChecks`, the `BUNDLERS` scoring weights), plus a note
+  on the `turbo` false-positive class.
+- **The Indonesian and Chinese READMEs still described v0.1** ("webpack, CRA, Rollup, Parcel
+  → Vite"), omitting multi-target, TypeScript, and 5 of the bundlers. Both corrected.
+- **The README's Sources/Targets line was stale**, missing Rspack, Vite, Bun, Metro,
+  Turbopack and the Bun target.
+
+### Added
+- **4 more tests** (25 total): Turborepo-is-not-Turbopack, a Turborepo monorepo that really
+  uses Vite, real `next dev --turbopack` still routing SSR, and `detect()` on an empty dir.
+
+### Verified (no change needed)
+- The 14×7 support matrix: all 98 cells exercised — 79 plan, 14 route, 5 already-there, 0 dead.
+- The detector against ground truth on all 12 real fixtures (6 sources + their 6 migrated copies).
+- All 6 published gzip size deltas reproduce from disk, including `31.0 KB → 44.7 KB (+44.3%)`.
+- All 6 study-case repos still resolve; all 14 README-referenced local files exist.
+
 ## [0.3.0] — 2026-07-09
 
 Full ecosystem coverage, tests, and two more real migration study cases.

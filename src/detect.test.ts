@@ -45,6 +45,34 @@ test('a plain `node build.js` with NO esbuild dep is NOT esbuild (no false posit
   assert.equal(detect(d).bundler, null);
 });
 
+test('detect() on an empty dir reports no bundler and CSR (no crash)', () => {
+  const d = detect(fixture({}));
+  assert.equal(d.bundler, null);
+  assert.equal(d.render.mode, 'csr');
+});
+
+test('Turborepo (`turbo` dep) is NOT Turbopack — it is a task runner, not a bundler', () => {
+  // npm `turbo` IS Turborepo. Turbopack ships inside Next and has no standalone dep.
+  const root = fixture({ devDependencies: { turbo: '2' }, scripts: { build: 'turbo run build' } }, { 'turbo.json': '{}' });
+  const r = detect(root);
+  assert.equal(r.bundler, null);
+  assert.equal(r.render.mode, 'csr');
+});
+
+test('Turborepo monorepo that really uses Vite detects as vite, not turbopack', () => {
+  const d = fixture(
+    { devDependencies: { turbo: '2', vite: '5' }, scripts: { build: 'turbo run build' } },
+    { 'vite.config.js': 'export default {}' },
+  );
+  assert.equal(detect(d).bundler, 'vite');
+});
+
+test('real Turbopack (`next dev --turbopack`) is still detected and routed SSR', () => {
+  const d = detect(fixture({ dependencies: { next: '15' }, scripts: { dev: 'next dev --turbopack', build: 'next build' } }));
+  assert.equal(d.render.mode, 'ssr');
+  assert.ok(d.bundler === 'turbopack' || d.bundler === 'next', `expected turbopack|next, got ${d.bundler}`);
+});
+
 test('React Native / Expo flagged as non-web (route-tier render mode)', () => {
   const rn = detect(fixture({ dependencies: { 'react-native': '0.74' }, scripts: { start: 'react-native start' } }));
   assert.equal(rn.render.mode, 'ssr');

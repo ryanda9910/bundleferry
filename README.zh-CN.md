@@ -4,7 +4,7 @@
 
 <h1 align="center">bundleferry</h1>
 
-<p align="center"><b>在不弄垮构建的前提下，把你的 JS 项目从一个打包器迁移到另一个（webpack、CRA、Rollup、Parcel 到 Vite）。</b></p>
+<p align="center"><b>在不弄垮构建的前提下，把你的 JS/TS 项目在任意两个打包器之间迁移。</b></p>
 
 <p align="center">
   <a href="README.md">🇺🇸 English</a> · <a href="README.id.md">🇮🇩 Bahasa Indonesia</a> · 🇨🇳 简体中文
@@ -17,9 +17,17 @@
 bundleferry 是 Claude Code（也支持 Codex、Cursor、Gemini CLI、opencode）里做打包器迁移的
 "船员"。换打包器看似只是改配置，其实不然：配置只能搞定约 80%，剩下的 20%——`process.env`、
 `.js` 文件里的 JSX、遗留的 PostCSS 配置、自定义 loader、SSR——正是每次真实迁移悄悄卡住的地方：
-构建通过了，行为却是错的。bundleferry 检测当前打包器与渲染模式，用三档规划迁移（绿色自动、
-黄色确认、红色留给人工清单），把 SSR/SSG 路由出去而不是硬转，并且在红色阻塞项未处理前拒绝
-说"完成"。零依赖、确定性。
+构建通过了，行为却是错的。bundleferry 检测当前打包器、渲染模式与 TypeScript 状况，由**你选择
+目标打包器**，然后用三档规划迁移（绿色自动、黄色确认、红色留给人工清单），把 SSR/SSG 路由出去
+而不是硬转，并且在红色阻塞项未处理前拒绝说"完成"。使用 TypeScript 编写，无运行时依赖。
+
+**它只做规划与度量，不会静默改写你的仓库。** 绿色的机械步骤由你应用，再用构建来验证。
+
+**来源打包器：** webpack · CRA · CRACO · Rollup · Parcel · esbuild · Snowpack · Gulp · Browserify · Rspack · Vite · Bun · Metro\* · Turbopack\*
+**目标打包器：** Vite · Rspack · esbuild · tsup · Rolldown · Parcel · Bun  — `bundleferry <dir> --target <名称>`
+\* Metro 与 Turbopack 只做检测并**路由**，不做迁移（它们面向平台/框架，不是可互换的 Web 打包器）。
+
+完整的 14 来源 x 7 目标矩阵、6 个真实仓库的实测表格与 About 说明，见[英文 README](README.md)。
 
 ## 前 / 后
 
