@@ -23,14 +23,21 @@ interface BundlerRule {
 }
 
 // Ordered — first strong match is the primary bundler. All-ecosystem coverage.
+// Precedence: framework-coupled + RN-specific first (metro/turbopack), then the rest.
 const BUNDLERS: BundlerRule[] = [
+  { name: 'metro', configs: ['metro.config.js', 'metro.config.cjs'], deps: ['metro', 'react-native', '@react-native/metro-config', 'expo'], script: /\b(metro|react-native|expo)\b/ },
   { name: 'craco', configs: ['craco.config.js', 'craco.config.cjs'], deps: ['@craco/craco'], script: /\bcraco\b/ },
   { name: 'cra', configs: [], deps: ['react-scripts'], script: /\breact-scripts\b/ },
+  // Turbopack is Next's bundler when dev/build run with --turbo (or Next 15+ default).
+  { name: 'turbopack', configs: [], deps: ['turbo'], script: /--turbo\b|next\s+(dev|build)\s+--turbopack/ },
   { name: 'next', configs: ['next.config.js', 'next.config.mjs', 'next.config.ts'], deps: ['next'], script: /\bnext\b/ },
+  { name: 'rspack', configs: ['rspack.config.js', 'rspack.config.ts', 'rspack.config.mjs'], deps: ['@rspack/core', '@rspack/cli'], script: /\brspack\b/ },
   { name: 'vite', configs: ['vite.config.js', 'vite.config.ts', 'vite.config.mjs'], deps: ['vite'], script: /\bvite\b/ },
   { name: 'snowpack', configs: ['snowpack.config.js', 'snowpack.config.mjs'], deps: ['snowpack'], script: /\bsnowpack\b/ },
   { name: 'parcel', configs: ['.parcelrc'], deps: ['parcel', 'parcel-bundler'], script: /\bparcel\b/, pkgField: (p) => !!(p.source || p.targets) },
   { name: 'webpack', configs: ['webpack.config.js', 'webpack.config.cjs', 'webpack.config.ts'], deps: ['webpack', 'webpack-cli'], script: /\bwebpack\b/ },
+  // Bun's own bundler: `bun build` in a script, or a build script that runs `bun`.
+  { name: 'bun', configs: ['bunfig.toml'], deps: [], script: /\bbun\s+build\b|\bbun\b/, weak: true },
   { name: 'gulp', configs: ['gulpfile.js', 'gulpfile.mjs', 'gulpfile.babel.js'], deps: ['gulp'], script: /\bgulp\b/, weak: true },
   { name: 'rollup', configs: ['rollup.config.js', 'rollup.config.mjs', 'rollup.config.ts'], deps: ['rollup'], script: /\brollup\b/, weak: true },
   { name: 'browserify', configs: [], deps: ['browserify'], script: /\bbrowserify\b/, weak: true },
@@ -84,7 +91,10 @@ function detectBundler(dir: string): { primary: SourceBundler | null; ranked: De
 
 function detectRenderMode(dir: string, bundler: SourceBundler | null, pkg: PackageJson): { mode: RenderMode; reason: string } {
   const allDeps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
-  if ('next' in allDeps || bundler === 'next') return { mode: 'ssr', reason: 'Next.js (SSR/SSG framework)' };
+  // React Native / Expo (Metro) is NOT a web bundler migration — flag as SSR-tier so the
+  // route gate stops it (there is no "migrate Metro to Vite"; RN bundling is platform-native).
+  if (bundler === 'metro' || 'react-native' in allDeps || 'expo' in allDeps) return { mode: 'ssr', reason: 'React Native / Expo (Metro — native bundler, not a web migration)' };
+  if (bundler === 'turbopack' || 'next' in allDeps || bundler === 'next') return { mode: 'ssr', reason: 'Next.js / Turbopack (SSR/SSG framework)' };
   if ('nuxt' in allDeps || 'nuxt3' in allDeps) return { mode: 'ssr', reason: 'Nuxt (SSR/SSG framework)' };
   if ('astro' in allDeps) return { mode: 'ssg', reason: 'Astro (SSG/hybrid framework)' };
   if ('@remix-run/react' in allDeps || 'remix' in allDeps) return { mode: 'ssr', reason: 'Remix (SSR framework)' };

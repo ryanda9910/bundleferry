@@ -12,10 +12,14 @@ export type SourceBundler =
   | 'snowpack'
   | 'gulp'
   | 'vite'
+  | 'rspack'
+  | 'turbopack'
+  | 'bun'
+  | 'metro'
   | 'next';
 
 /** Every bundler bundleferry can migrate TOWARD as a TARGET. */
-export type TargetBundler = 'vite' | 'rspack' | 'esbuild' | 'tsup' | 'rolldown' | 'parcel';
+export type TargetBundler = 'vite' | 'rspack' | 'esbuild' | 'tsup' | 'rolldown' | 'parcel' | 'bun';
 
 export type RenderMode = 'csr' | 'ssr' | 'ssg';
 

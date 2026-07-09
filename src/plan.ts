@@ -9,10 +9,10 @@ import * as path from 'node:path';
 import type { DetectResult, MigratePlan, Plan, SourceBundler, Step, TargetBundler, TsInfo } from './types.js';
 
 const TARGET_LABELS: Record<TargetBundler, string> = {
-  vite: 'Vite', rspack: 'Rspack', esbuild: 'esbuild', tsup: 'tsup', rolldown: 'Rolldown', parcel: 'Parcel',
+  vite: 'Vite', rspack: 'Rspack', esbuild: 'esbuild', tsup: 'tsup', rolldown: 'Rolldown', parcel: 'Parcel', bun: 'Bun',
 };
 
-export const TARGETS: TargetBundler[] = ['vite', 'rspack', 'esbuild', 'tsup', 'rolldown', 'parcel'];
+export const TARGETS: TargetBundler[] = ['vite', 'rspack', 'esbuild', 'tsup', 'rolldown', 'parcel', 'bun'];
 
 function has(dir: string, rel: string): boolean { return fs.existsSync(path.join(dir, rel)); }
 
@@ -91,6 +91,36 @@ const SOURCE_UNWIND: Record<string, { label: string; green: string[]; yellow: st
     yellow: ['babelify / other transforms → the target\'s native transform', 'CommonJS source is fine for Rollup/Vite targets but confirm no dynamic require()', 'node core shims (browserify auto-polyfilled) → add a node-polyfills plugin if the code needs them'],
     red: ['Browserify-specific transforms with no modern equivalent', 'heavy reliance on node core in the browser (browserify hid this) — surfaces as externalized-module errors'],
   },
+  rspack: {
+    label: 'Rspack',
+    green: ['rspack.config is webpack-shaped, so most keys move 1:1 to a webpack-family target', 'builtin:swc-loader → the target\'s native SWC/esbuild transform', 'output/resolve/devServer map directly'],
+    yellow: ['@rspack/* plugins → the target\'s plugin equivalents', 'experiments.css / builtins → the target\'s native CSS'],
+    red: ['Rspack Module Federation setups — verify the target supports MF before moving'],
+  },
+  vite: {
+    label: 'Vite',
+    green: ['build.rollupOptions → a Rollup/Rolldown target directly (Vite build IS Rollup)', 'resolve.alias / define / server → the target\'s keys'],
+    yellow: ['@vitejs/plugin-* → the target\'s plugin ecosystem (not all Vite plugins have equivalents)', 'import.meta.env → the target\'s env convention (only Vite/Rolldown keep it natively)'],
+    red: ['Vite plugins with no target equivalent (Vite has the richest plugin set — moving AWAY usually loses some)', 'you are usually migrating TO Vite, not away — reconsider unless you have a specific reason'],
+  },
+  bun: {
+    label: 'Bun',
+    green: ['Bun.build({ entrypoints, outdir }) → the target\'s entry/outDir', 'Bun bundler is esbuild-like, so define/loader/target concepts carry over'],
+    yellow: ['Bun-specific APIs (Bun.file, bun:sqlite) do not exist in other runtimes — only the BUNDLING migrates', 'Bun plugins → the target\'s plugin API'],
+    red: ['code that depends on the Bun runtime (not just its bundler) cannot move to a Node-based target'],
+  },
+  metro: {
+    label: 'Metro (React Native)',
+    green: [],
+    yellow: [],
+    red: ['Metro bundles React Native for native platforms — there is NO web-bundler migration path. This is not a webpack→Vite-style swap. (Handled by the route gate.)'],
+  },
+  turbopack: {
+    label: 'Turbopack',
+    green: [],
+    yellow: [],
+    red: ['Turbopack is Next.js\'s bundler — migrating means changing framework, not just bundler. (Handled by the route gate.)'],
+  },
 };
 
 // ---- what each TARGET bundler needs on arrival (target-specific caveats) ----
@@ -124,6 +154,11 @@ const TARGET_ARRIVE: Record<TargetBundler, { green: string[]; yellow: string[]; 
     green: ['zero-config: often just point Parcel at index.html', 'good when you want minimal config'],
     yellow: ['custom pipeline needs a .parcelrc', 'env is inlined without a prefix (differs from Vite)'],
     red: ['fewer escape hatches than Vite/webpack for exotic setups'],
+  },
+  bun: {
+    green: ['Bun.build({ entrypoints, outdir, target }) — a tiny build script, esbuild-like speed', 'runs the build with the Bun runtime (very fast installs + bundling)'],
+    yellow: ['no full dev server with HMR like Vite (Bun serves static output)', 'plugin API is young — fewer plugins than Rollup/Vite', 'requires Bun installed (not just Node)'],
+    red: ['Bun bundler is best for apps/libs that do not need a rich plugin/HMR story — a complex CSR app may want Vite instead'],
   },
 };
 
